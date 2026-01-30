@@ -3,7 +3,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ] # Change to 'master' if your default branch is named master
+    branches: [ main ]
+  workflow_dispatch: # This line enables the manual trigger button
 
 permissions:
   contents: read
@@ -26,7 +27,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # This injects your secret key into the build process
+          # This pulls the secret you created in Step 2 and gives it to the build
           VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
