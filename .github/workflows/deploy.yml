@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # This variable is injected into vite.config.ts
+          # This variable is picked up by vite.config.ts
           API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
