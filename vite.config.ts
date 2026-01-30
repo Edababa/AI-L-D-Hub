@@ -1,13 +1,15 @@
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Replace 'ci-ld-hub' with your actual GitHub repository name if different
-  base: '/ci-ld-hub/', 
+  // Using relative base paths ensures it works on any GitHub Pages URL
+  base: './', 
   build: {
     outDir: 'dist',
+  },
+  define: {
+    // This allows the Gemini SDK to access process.env.API_KEY in the browser
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY)
   }
 })
