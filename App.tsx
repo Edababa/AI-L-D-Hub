@@ -23,6 +23,7 @@ interface AppContextType extends AppState {
   promoteUser: (userId: string) => void;
   demoteUser: (userId: string) => void;
   exportData: () => void;
+  exportToCSV: (type: 'users' | 'enrollments') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -33,14 +34,6 @@ export const useApp = () => {
   return context;
 };
 
-// --- Protected Route Wrapper ---
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser } = useApp();
-  if (!currentUser) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-};
-
-// --- Main App Component ---
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('ci_ld_hub_data');
@@ -193,6 +186,32 @@ const App: React.FC = () => {
     downloadAnchorNode.remove();
   };
 
+  const exportToCSV = (type: 'users' | 'enrollments') => {
+    let csvContent = "";
+    if (type === 'users') {
+      csvContent = "ID,Name,Email,Role,Points,JoinedDate\n";
+      state.users.forEach(u => {
+        csvContent += `${u.id},"${u.name}",${u.email},${u.role},${u.points},${u.joinedDate}\n`;
+      });
+    } else {
+      csvContent = "EnrollmentID,UserName,CourseTitle,Status,LastUpdated\n";
+      state.enrollments.forEach(e => {
+        const user = state.users.find(u => u.id === e.userId);
+        const course = state.courses.find(c => c.id === e.courseId);
+        csvContent += `${e.id},"${user?.name}", "${course?.title}", ${e.status}, ${e.updatedAt}\n`;
+      });
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ci_ld_hub_${type}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const contextValue: AppContextType = {
     ...state,
     setCurrentUser: (user) => setState(prev => ({ ...prev, currentUser: user })),
@@ -206,10 +225,10 @@ const App: React.FC = () => {
     promoteUser,
     demoteUser,
     exportData,
+    exportToCSV,
   };
 
   return (
-    // FIX: Changed 'context' prop to 'value' as required by React Context Provider
     <AppContext.Provider value={contextValue}>
       <Router>
         <AppLayout />
@@ -219,7 +238,7 @@ const App: React.FC = () => {
 };
 
 const AppLayout: React.FC = () => {
-  const { currentUser, logout, users, setCurrentUser } = useApp();
+  const { currentUser, logout } = useApp();
   const location = useLocation();
 
   if (!currentUser && location.pathname !== '/login') {
@@ -237,7 +256,6 @@ const AppLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col">
         <div className="p-6 border-b border-slate-800">
           <h1 className="text-2xl font-bold tracking-tight text-blue-400">CI L&D Hub</h1>
@@ -287,7 +305,6 @@ const AppLayout: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-slate-50 p-8">
         <Routes>
           <Route path="/" element={<Home />} />

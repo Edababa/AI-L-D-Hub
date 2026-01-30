@@ -5,7 +5,7 @@ import { UserRole } from '../types';
 import { Button } from '../components/ui/Button';
 
 const AdminDashboard: React.FC = () => {
-  const { users, courses, enrollments, promoteUser, demoteUser, exportData, currentUser } = useApp();
+  const { users, courses, enrollments, promoteUser, demoteUser, exportToCSV, currentUser } = useApp();
   const [activeTab, setActiveTab] = useState<'users' | 'stats'>('users');
 
   const stats = {
@@ -18,15 +18,21 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <header className="mb-10 flex justify-between items-center">
+      <header className="mb-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Admin Control Panel</h2>
           <p className="text-slate-500">Manage researchers, roles, and platform health.</p>
         </div>
-        <Button variant="secondary" onClick={exportData}>
-          <i className="fas fa-file-export mr-2"></i>
-          Export to JSON (Sheet-Ready)
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => exportToCSV('users')}>
+            <i className="fas fa-users mr-2"></i>
+            Users CSV (Excel)
+          </Button>
+          <Button variant="secondary" onClick={() => exportToCSV('enrollments')}>
+            <i className="fas fa-file-csv mr-2"></i>
+            Learning CSV (Excel)
+          </Button>
+        </div>
       </header>
 
       {/* Stats Summary */}
@@ -146,9 +152,9 @@ const AdminDashboard: React.FC = () => {
              <h4 className="font-bold mb-4">Engagement Trends</h4>
              <div className="flex flex-col items-center justify-center h-48 text-slate-400">
                 <i className="fas fa-chart-line text-4xl mb-2 opacity-20"></i>
-                <p className="text-sm">Dynamic charting would load here in production.</p>
-                <Button size="sm" variant="secondary" className="mt-4" onClick={() => alert("Detailed logs being generated for download...")}>
-                  Download Audit Log
+                <p className="text-sm">Dynamic statistics generated above.</p>
+                <Button size="sm" variant="secondary" className="mt-4" onClick={() => exportToCSV('enrollments')}>
+                  Download Full Activity Log
                 </Button>
              </div>
           </div>
@@ -161,10 +167,10 @@ const AdminDashboard: React.FC = () => {
             <i className="fas fa-info-circle text-2xl"></i>
           </div>
           <div>
-            <h4 className="font-bold">Pro-Tip for Admins</h4>
+            <h4 className="font-bold">Excel Integration</h4>
             <p className="text-sm text-slate-400">
-              You can export this data anytime and paste it directly into Google Sheets or MS Teams. 
-              The JSON format is optimized for easy parsing into columns.
+              The "CSV" buttons download files that can be opened directly in Microsoft Excel or Google Sheets. 
+              Use these for department-wide reporting and rewards calculation.
             </p>
           </div>
         </div>

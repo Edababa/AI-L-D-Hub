@@ -10,22 +10,34 @@ const Home: React.FC = () => {
   const { courses, enrollments, feedback, users, currentUser, addCourse, removeCourse, updateEnrollment } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState<'latest' | 'rating'>('latest');
   const [showAddModal, setShowAddModal] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
 
   const filteredCourses = useMemo(() => {
-    return courses.filter(course => {
+    let result = courses.filter(course => {
       const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                             course.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || course.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [courses, searchTerm, selectedCategory]);
+
+    if (sortBy === 'rating') {
+      result = [...result].sort((a, b) => {
+        const ratingA = feedback.filter(f => f.courseId === a.id).reduce((acc, f) => acc + f.rating, 0) / (feedback.filter(f => f.courseId === a.id).length || 1);
+        const ratingB = feedback.filter(f => f.courseId === b.id).reduce((acc, f) => acc + f.rating, 0) / (feedback.filter(f => f.courseId === b.id).length || 1);
+        return ratingB - ratingA;
+      });
+    } else {
+      result = [...result].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    return result;
+  }, [courses, searchTerm, selectedCategory, sortBy, feedback]);
 
   const handleFetchAI = async () => {
     setAiLoading(true);
-    // Real researchers would have complex profiles, we mock some tags here
     const suggestions = await getAIRecommendations(['Generative AI', 'Agentic Workflows', 'Python'], courses);
     setAiSuggestions(suggestions);
     setAiLoading(false);
@@ -40,8 +52,8 @@ const Home: React.FC = () => {
     const recommender = users.find(u => u.id === course.recommendedBy)?.name || 'Unknown';
 
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-        <div className="p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow flex flex-col h-full">
+        <div className="p-6 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-4">
             <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-md uppercase tracking-wide">
               {course.category}
@@ -55,12 +67,12 @@ const Home: React.FC = () => {
           <h3 className="text-lg font-bold text-slate-800 mb-2">{course.title}</h3>
           <p className="text-slate-600 text-sm line-clamp-3 mb-4">{course.description}</p>
           
-          <div className="flex items-center text-xs text-slate-400 mb-6">
+          <div className="flex items-center text-xs text-slate-400 mt-auto mb-6">
             <i className="fas fa-user-circle mr-1.5"></i>
             <span>Recommended by <span className="text-slate-600 font-medium">{recommender}</span></span>
           </div>
 
-          <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
             <div className="flex flex-col">
                <span className="text-[10px] text-slate-400 uppercase font-bold mb-1">Status</span>
                <select 
@@ -76,7 +88,7 @@ const Home: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <a href={course.link} target="_blank" rel="noopener noreferrer">
-                <Button size="sm">Go to Course</Button>
+                <Button size="sm">Go</Button>
               </a>
               {currentUser?.role === UserRole.ADMIN && (
                 <Button variant="danger" size="sm" onClick={() => removeCourse(course.id)}>
@@ -144,8 +156,8 @@ const Home: React.FC = () => {
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
+      {/* Filters & Sorting */}
+      <div className="mb-8 flex flex-col lg:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
           <input 
@@ -156,14 +168,24 @@ const Home: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <select 
-          className="w-full md:w-48 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-        >
-          <option value="All">All Categories</option>
-          {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-        </select>
+        <div className="flex gap-4 w-full lg:w-auto">
+          <select 
+            className="flex-1 lg:w-48 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            <option value="All">All Categories</option>
+            {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+          </select>
+          <select 
+            className="flex-1 lg:w-48 px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+          >
+            <option value="latest">Newest First</option>
+            <option value="rating">Top Rated (Rank)</option>
+          </select>
+        </div>
       </div>
 
       {/* Grid */}
