@@ -1,0 +1,8 @@
+{
+  "name": "CI L&D Hub",
+  "description": "A customized Learning & Development platform for research departments to discover, track, and recommend AI and tech courses with gamification and admin controls.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
