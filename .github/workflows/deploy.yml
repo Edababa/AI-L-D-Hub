@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # Removed the cache: 'npm' line which was causing the red cross error
           
       - name: Install dependencies
         run: npm install
@@ -29,7 +29,6 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # This pulls from your GitHub Repository Secrets
           API_KEY: ${{ secrets.GEMINI_API_KEY }}
           
       - name: Upload artifact
