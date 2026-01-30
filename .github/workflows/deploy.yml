@@ -1,10 +1,9 @@
-
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # This line enables the manual trigger button
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,8 +26,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # This pulls the secret you created in Step 2 and gives it to the build
-          VITE_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # This variable is injected into vite.config.ts
+          API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
