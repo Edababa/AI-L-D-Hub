@@ -2,9 +2,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Course } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// In Vite, environment variables are accessed via import.meta.env
+// We also keep a fallback to process.env for local development compatibility
+const API_KEY = (import.meta as any).env?.VITE_GEMINI_API_KEY || (process.env as any).API_KEY;
+
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export const getAIRecommendations = async (userInterests: string[], currentCourses: Course[]) => {
+  if (!API_KEY) {
+    console.warn("Gemini API Key is missing. Check your GitHub Secrets.");
+    return [];
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
@@ -37,6 +46,8 @@ export const getAIRecommendations = async (userInterests: string[], currentCours
 };
 
 export const generateCourseSummary = async (title: string, description: string) => {
+    if (!API_KEY) return description;
+    
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
