@@ -112,7 +112,7 @@ const Home: React.FC = () => {
         <div className="flex gap-3">
           <Button variant="secondary" onClick={handleFetchAI} disabled={aiLoading}>
             <i className={`fas fa-magic mr-2 ${aiLoading ? 'animate-spin' : ''}`}></i>
-            AI Recommendations
+            AI Recommendations (coming soon..)
           </Button>
           <Button onClick={() => setShowAddModal(true)}>
             <i className="fas fa-plus mr-2"></i>
