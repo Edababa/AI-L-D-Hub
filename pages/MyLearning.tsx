@@ -144,7 +144,7 @@ const MyLearning: React.FC = () => {
         <div className="space-y-8">
            <div className="bg-indigo-600 text-white rounded-2xl p-6 shadow-lg shadow-indigo-100">
               <h4 className="text-lg font-bold mb-2 flex items-center">
-                <i className="fas fa-bell mr-2"></i> Reminders
+                <i className="fas fa-bell mr-2"></i> Reminders (coming soon..)
               </h4>
               <p className="text-indigo-100 text-sm mb-4">Don't forget to complete your goals this month!</p>
               <div className="bg-white/10 rounded-xl p-3 mb-3 border border-white/10">
