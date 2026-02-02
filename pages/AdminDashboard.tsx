@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '../App';
-import { UserRole } from '../types';
+import { UserRole, CourseStatus } from '../types';
 import { Button } from '../components/ui/Button';
 
 const AdminDashboard: React.FC = () => {
@@ -12,7 +12,7 @@ const AdminDashboard: React.FC = () => {
     totalUsers: users.length,
     totalCourses: courses.length,
     totalEnrollments: enrollments.length,
-    totalCompletions: enrollments.filter(e => e.status === 'FULLY_COMPLETED').length,
+    totalCompletions: enrollments.filter(e => e.status === CourseStatus.FULLY_COMPLETED).length,
     adminCount: users.filter(u => u.role === UserRole.ADMIN).length
   };
 
@@ -24,11 +24,21 @@ const AdminDashboard: React.FC = () => {
           <p className="text-slate-500 font-medium">Manage the department hub and researcher permissions.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => fetchFromCloud()} disabled={isSyncing} className="shadow-sm">
+          <Button 
+            variant="secondary" 
+            onClick={() => fetchFromCloud()} 
+            disabled={isSyncing} 
+            className="shadow-sm border-slate-200"
+          >
             <i className={`fas fa-sync mr-2 ${isSyncing ? 'animate-spin' : ''}`}></i>
             Refresh Cloud
           </Button>
-          <Button variant="primary" onClick={() => syncToCloud()} disabled={isSyncing} className="shadow-lg shadow-blue-500/20">
+          <Button 
+            variant="primary" 
+            onClick={() => syncToCloud()} 
+            disabled={isSyncing} 
+            className="shadow-lg shadow-blue-500/20 bg-blue-600 hover:bg-blue-700"
+          >
             <i className="fas fa-cloud-upload-alt mr-2"></i>
             Push Master Data
           </Button>
@@ -128,9 +138,9 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
             <h4 className="text-xl font-black text-slate-800 mb-6">Cloud Sync Setup</h4>
             <div className="space-y-4 text-sm text-slate-600 font-medium">
-              <p>1. Paste your Web App URL into <code className="bg-slate-100 px-1 rounded">App.tsx</code> (Line 17).</p>
-              <p>2. Click <span className="text-blue-600 font-bold uppercase">Push Master Data</span> at the top right to initialize the Spreadsheet.</p>
-              <p>3. The app will now automatically save all changes to your Google Sheet.</p>
+              <p>1. Paste your Web App URL into <code className="bg-slate-100 px-1 rounded">App.tsx</code> (Line 16).</p>
+              <p>2. Click <span className="text-blue-600 font-bold uppercase">Push Master Data</span> at the top right of this page.</p>
+              <p>3. If the button above is missing, your site hasn't updated. Check GitHub Actions.</p>
             </div>
           </div>
           <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200">
@@ -140,10 +150,6 @@ const AdminDashboard: React.FC = () => {
               <div className="p-3 bg-white/5 rounded-xl border border-white/10">
                 <p className="font-bold text-emerald-400 text-[10px] mb-1 uppercase tracking-widest">Excel Export</p>
                 <p className="text-[11px] text-slate-300">Google Sheet > File > Download > .xlsx</p>
-              </div>
-              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                <p className="font-bold text-emerald-400 text-[10px] mb-1 uppercase tracking-widest">Management</p>
-                <p className="text-[11px] text-slate-300">Use the Sheet tabs to generate your own department statistics.</p>
               </div>
             </div>
           </div>
