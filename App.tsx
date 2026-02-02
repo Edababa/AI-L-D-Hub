@@ -12,8 +12,7 @@ import Login from './pages/Login';
 
 /**
  * --- CLOUD CONFIGURATION ---
- * 1. Paste your Google Apps Script Web App URL below.
- * 2. It should look like: "https://script.google.com/macros/s/ABC_123/exec"
+ * 1. PASTE YOUR URL BELOW between the quotes.
  */
 const CLOUD_URL: string = "https://script.google.com/macros/s/AKfycbxdibLzZ-q94bGsxv5TLF6bIYmm3HNa7yc20CNEYXQDR56Eg5ibkEXtahBDsOqJ4EkIqQ/exec"; 
 
@@ -57,14 +56,12 @@ const App: React.FC = () => {
     };
   });
 
-  // Fetch from cloud on initial load if URL is provided
   useEffect(() => {
     if (CLOUD_URL && CLOUD_URL.startsWith('http')) {
       fetchFromCloud();
     }
   }, []);
 
-  // Save to local storage as a primary backup
   useEffect(() => {
     localStorage.setItem('ci_ld_hub_data', JSON.stringify(state));
   }, [state]);
@@ -77,7 +74,6 @@ const App: React.FC = () => {
       if (!response.ok) throw new Error("Network response was not ok");
       const data = await response.json();
       
-      // Update state with cloud data if it exists and is valid
       if (data && data.courses && data.courses.length > 0) {
         setState(prev => ({
           ...prev,
@@ -85,7 +81,6 @@ const App: React.FC = () => {
           courses: data.courses,
           enrollments: data.enrollments || [],
           feedback: data.feedback || [],
-          // Preserve currentUser from local state
           currentUser: prev.currentUser
         }));
       }
@@ -99,7 +94,10 @@ const App: React.FC = () => {
   };
 
   const syncToCloud = async (overrideState?: AppState) => {
-    if (!CLOUD_URL || !CLOUD_URL.startsWith('http')) return;
+    if (!CLOUD_URL || !CLOUD_URL.startsWith('http')) {
+       alert("Please set the CLOUD_URL in App.tsx first!");
+       return;
+    }
     setIsSyncing(true);
     const stateToSync = overrideState || state;
     
