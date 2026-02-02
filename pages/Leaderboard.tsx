@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useApp } from '../App';
+import { CourseStatus } from '../types';
 
 const Leaderboard: React.FC = () => {
   const { users, courses, enrollments } = useApp();
@@ -16,7 +17,7 @@ const Leaderboard: React.FC = () => {
   // Calculate Most Active (Enrollments)
   const activityCounts = users.map(u => ({
     ...u,
-    completions: enrollments.filter(e => e.userId === u.id && e.status === 'FULLY_COMPLETED').length
+    completions: enrollments.filter(e => e.userId === u.id && e.status === CourseStatus.FULLY_COMPLETED).length
   })).sort((a, b) => b.completions - a.completions);
 
   return (
@@ -113,8 +114,8 @@ const Leaderboard: React.FC = () => {
       <div className="mt-12 p-8 bg-blue-50 rounded-3xl text-center border border-blue-100">
         <h4 className="text-2xl font-black text-blue-900 mb-2">Rewards Program</h4>
         <p className="text-blue-700 max-w-2xl mx-auto">
-          Top 3 researchers in each category will be recognized during our department meetings 
-          Prizes could include exclusive tech swag, conference passes, and professional certifications.
+          Top 3 researchers in each category will be recognized during our monthly department sync. 
+          Prizes include exclusive tech swag, conference passes, and professional certifications.
         </p>
       </div>
     </div>
