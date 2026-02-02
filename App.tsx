@@ -10,8 +10,16 @@ import Leaderboard from './pages/Leaderboard';
 import AdminDashboard from './pages/AdminDashboard';
 import Login from './pages/Login';
 
-// --- Context Setup ---
+/**
+ * --- CLOUD CONFIGURATION ---
+ * 1. Paste your Google Apps Script Web App URL below.
+ * 2. It should look like: "https://script.google.com/macros/s/ABC_123/exec"
+ */
+const CLOUD_URL: string = "https://script.google.com/macros/s/AKfycbxdibLzZ-q94bGsxv5TLF6bIYmm3HNa7yc20CNEYXQDR56Eg5ibkEXtahBDsOqJ4EkIqQ/exec"; 
+
 interface AppContextType extends AppState {
+  isSyncing: boolean;
+  cloudError: string | null;
   setCurrentUser: (user: User | null) => void;
   login: (email: string) => boolean;
   register: (name: string, email: string) => void;
@@ -22,8 +30,8 @@ interface AppContextType extends AppState {
   addFeedback: (courseId: string, rating: number, comment: string) => void;
   promoteUser: (userId: string) => void;
   demoteUser: (userId: string) => void;
-  exportData: () => void;
-  exportToCSV: (type: 'users' | 'enrollments') => void;
+  syncToCloud: (overrideState?: AppState) => Promise<void>;
+  fetchFromCloud: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -35,6 +43,8 @@ export const useApp = () => {
 };
 
 const App: React.FC = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [cloudError, setCloudError] = useState<string | null>(null);
   const [state, setState] = useState<AppState>(() => {
     const saved = localStorage.getItem('ci_ld_hub_data');
     if (saved) return JSON.parse(saved);
@@ -47,9 +57,72 @@ const App: React.FC = () => {
     };
   });
 
+  // Fetch from cloud on initial load if URL is provided
+  useEffect(() => {
+    if (CLOUD_URL && CLOUD_URL.startsWith('http')) {
+      fetchFromCloud();
+    }
+  }, []);
+
+  // Save to local storage as a primary backup
   useEffect(() => {
     localStorage.setItem('ci_ld_hub_data', JSON.stringify(state));
   }, [state]);
+
+  const fetchFromCloud = async () => {
+    if (!CLOUD_URL || !CLOUD_URL.startsWith('http')) return;
+    setIsSyncing(true);
+    try {
+      const response = await fetch(CLOUD_URL);
+      if (!response.ok) throw new Error("Network response was not ok");
+      const data = await response.json();
+      
+      // Update state with cloud data if it exists and is valid
+      if (data && data.courses && data.courses.length > 0) {
+        setState(prev => ({
+          ...prev,
+          users: data.users && data.users.length > 0 ? data.users : prev.users,
+          courses: data.courses,
+          enrollments: data.enrollments || [],
+          feedback: data.feedback || [],
+          // Preserve currentUser from local state
+          currentUser: prev.currentUser
+        }));
+      }
+      setCloudError(null);
+    } catch (err) {
+      console.error("Cloud fetch failed:", err);
+      setCloudError("Offline: Using local cache.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const syncToCloud = async (overrideState?: AppState) => {
+    if (!CLOUD_URL || !CLOUD_URL.startsWith('http')) return;
+    setIsSyncing(true);
+    const stateToSync = overrideState || state;
+    
+    try {
+      await fetch(CLOUD_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          users: stateToSync.users,
+          courses: stateToSync.courses,
+          enrollments: stateToSync.enrollments,
+          feedback: stateToSync.feedback
+        })
+      });
+      setCloudError(null);
+    } catch (err) {
+      console.error("Cloud sync failed:", err);
+      setCloudError("Sync Error: Cloud update failed.");
+    } finally {
+      setTimeout(() => setIsSyncing(false), 1200);
+    }
+  };
 
   const login = (email: string) => {
     const user = state.users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -69,11 +142,13 @@ const App: React.FC = () => {
       points: 0,
       joinedDate: new Date().toISOString()
     };
-    setState(prev => ({
-      ...prev,
-      users: [...prev.users, newUser],
+    const newState = {
+      ...state,
+      users: [...state.users, newUser],
       currentUser: newUser
-    }));
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const logout = () => {
@@ -86,55 +161,60 @@ const App: React.FC = () => {
       id: Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
     };
-    setState(prev => ({
-      ...prev,
-      courses: [...prev.courses, newCourse],
-      users: prev.users.map(u => u.id === prev.currentUser?.id ? { ...u, points: u.points + 20 } : u),
-      currentUser: prev.currentUser?.id === prev.currentUser?.id ? { ...prev.currentUser!, points: prev.currentUser!.points + 20 } : prev.currentUser
-    }));
+    const newState = {
+      ...state,
+      courses: [newCourse, ...state.courses],
+      users: state.users.map(u => u.id === state.currentUser?.id ? { ...u, points: u.points + 20 } : u),
+      currentUser: state.currentUser ? { ...state.currentUser, points: state.currentUser.points + 20 } : null
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const removeCourse = (courseId: string) => {
     if (state.currentUser?.role !== UserRole.ADMIN) return;
-    setState(prev => ({
-      ...prev,
-      courses: prev.courses.filter(c => c.id !== courseId),
-      enrollments: prev.enrollments.filter(e => e.courseId !== courseId),
-      feedback: prev.feedback.filter(f => f.courseId !== courseId)
-    }));
+    const newState = {
+      ...state,
+      courses: state.courses.filter(c => c.id !== courseId),
+      enrollments: state.enrollments.filter(e => e.courseId !== courseId),
+      feedback: state.feedback.filter(f => f.courseId !== courseId)
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const updateEnrollment = (courseId: string, status: CourseStatus) => {
     if (!state.currentUser) return;
-    setState(prev => {
-      const existingIdx = prev.enrollments.findIndex(e => e.courseId === courseId && e.userId === prev.currentUser?.id);
-      let newEnrollments = [...prev.enrollments];
-      let pointBump = 0;
+    const existingIdx = state.enrollments.findIndex(e => e.courseId === courseId && e.userId === state.currentUser?.id);
+    let newEnrollments = [...state.enrollments];
+    let pointBump = 0;
 
-      if (status === CourseStatus.FULLY_COMPLETED) pointBump = 50;
+    const alreadyCompleted = state.enrollments.some(e => e.courseId === courseId && e.userId === state.currentUser?.id && e.status === CourseStatus.FULLY_COMPLETED);
+    if (status === CourseStatus.FULLY_COMPLETED && !alreadyCompleted) pointBump = 50;
 
-      if (existingIdx > -1) {
-        newEnrollments[existingIdx] = { ...newEnrollments[existingIdx], status, updatedAt: new Date().toISOString() };
-      } else {
-        newEnrollments.push({
-          id: Math.random().toString(36).substr(2, 9),
-          userId: prev.currentUser.id,
-          courseId,
-          status,
-          updatedAt: new Date().toISOString()
-        });
-      }
+    if (existingIdx > -1) {
+      newEnrollments[existingIdx] = { ...newEnrollments[existingIdx], status, updatedAt: new Date().toISOString() };
+    } else {
+      newEnrollments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        userId: state.currentUser!.id,
+        courseId,
+        status,
+        updatedAt: new Date().toISOString()
+      });
+    }
 
-      const updatedUsers = prev.users.map(u => u.id === prev.currentUser?.id ? { ...u, points: u.points + pointBump } : u);
-      const updatedCurrentUser = prev.currentUser ? { ...prev.currentUser, points: prev.currentUser.points + pointBump } : null;
+    const updatedUsers = state.users.map(u => u.id === state.currentUser?.id ? { ...u, points: u.points + pointBump } : u);
+    const updatedCurrentUser = state.currentUser ? { ...state.currentUser, points: state.currentUser.points + pointBump } : null;
 
-      return {
-        ...prev,
-        enrollments: newEnrollments,
-        users: updatedUsers,
-        currentUser: updatedCurrentUser
-      };
-    });
+    const newState = {
+      ...state,
+      enrollments: newEnrollments,
+      users: updatedUsers,
+      currentUser: updatedCurrentUser
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const addFeedback = (courseId: string, rating: number, comment: string) => {
@@ -147,73 +227,42 @@ const App: React.FC = () => {
       comment,
       createdAt: new Date().toISOString()
     };
-    setState(prev => ({
-      ...prev,
-      feedback: [...prev.feedback, newFeedback],
-      users: prev.users.map(u => u.id === prev.currentUser?.id ? { ...u, points: u.points + 5 } : u),
-      currentUser: prev.currentUser ? { ...prev.currentUser, points: prev.currentUser.points + 5 } : null
-    }));
+    const newState = {
+      ...state,
+      feedback: [...state.feedback, newFeedback],
+      users: state.users.map(u => u.id === state.currentUser?.id ? { ...u, points: u.points + 5 } : u),
+      currentUser: state.currentUser ? { ...state.currentUser, points: state.currentUser.points + 5 } : null
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const promoteUser = (userId: string) => {
     const adminCount = state.users.filter(u => u.role === UserRole.ADMIN).length;
-    if (adminCount >= 10) {
-      alert("Maximum of 10 admins allowed.");
-      return;
-    }
-    setState(prev => {
-      const updatedUsers = prev.users.map(u => u.id === userId ? { ...u, role: UserRole.ADMIN } : u);
-      const updatedCurrentUser = prev.currentUser?.id === userId ? { ...prev.currentUser, role: UserRole.ADMIN } : prev.currentUser;
-      return { ...prev, users: updatedUsers, currentUser: updatedCurrentUser };
-    });
+    if (adminCount >= 10) return;
+    const newState = {
+      ...state,
+      users: state.users.map(u => u.id === userId ? { ...u, role: UserRole.ADMIN } : u),
+      currentUser: state.currentUser?.id === userId ? { ...state.currentUser, role: UserRole.ADMIN } : state.currentUser
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const demoteUser = (userId: string) => {
-    setState(prev => {
-      const updatedUsers = prev.users.map(u => u.id === userId ? { ...u, role: UserRole.RESEARCHER } : u);
-      const updatedCurrentUser = prev.currentUser?.id === userId ? { ...prev.currentUser, role: UserRole.RESEARCHER } : prev.currentUser;
-      return { ...prev, users: updatedUsers, currentUser: updatedCurrentUser };
-    });
-  };
-
-  const exportData = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "ci_ld_hub_data.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  const exportToCSV = (type: 'users' | 'enrollments') => {
-    let csvContent = "";
-    if (type === 'users') {
-      csvContent = "ID,Name,Email,Role,Points,JoinedDate\n";
-      state.users.forEach(u => {
-        csvContent += `${u.id},"${u.name}",${u.email},${u.role},${u.points},${u.joinedDate}\n`;
-      });
-    } else {
-      csvContent = "EnrollmentID,UserName,CourseTitle,Status,LastUpdated\n";
-      state.enrollments.forEach(e => {
-        const user = state.users.find(u => u.id === e.userId);
-        const course = state.courses.find(c => c.id === e.courseId);
-        csvContent += `${e.id},"${user?.name}", "${course?.title}", ${e.status}, ${e.updatedAt}\n`;
-      });
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `ci_ld_hub_${type}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const newState = {
+      ...state,
+      users: state.users.map(u => u.id === userId ? { ...u, role: UserRole.RESEARCHER } : u),
+      currentUser: state.currentUser?.id === userId ? { ...state.currentUser, role: UserRole.RESEARCHER } : state.currentUser
+    };
+    setState(newState);
+    syncToCloud(newState);
   };
 
   const contextValue: AppContextType = {
     ...state,
+    isSyncing,
+    cloudError,
     setCurrentUser: (user) => setState(prev => ({ ...prev, currentUser: user })),
     login,
     register,
@@ -224,8 +273,8 @@ const App: React.FC = () => {
     addFeedback,
     promoteUser,
     demoteUser,
-    exportData,
-    exportToCSV,
+    syncToCloud,
+    fetchFromCloud,
   };
 
   return (
@@ -238,7 +287,7 @@ const App: React.FC = () => {
 };
 
 const AppLayout: React.FC = () => {
-  const { currentUser, logout } = useApp();
+  const { currentUser, logout, isSyncing, cloudError, fetchFromCloud } = useApp();
   const location = useLocation();
 
   if (!currentUser && location.pathname !== '/login') {
@@ -255,67 +304,93 @@ const AppLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col relative z-20 shadow-2xl">
         <div className="p-6 border-b border-slate-800">
-          <h1 className="text-2xl font-bold tracking-tight text-blue-400">CI L&D Hub</h1>
-          <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest font-semibold">Researcher Central</p>
+          <div className="flex items-center justify-between mb-1">
+            <h1 className="text-xl font-black tracking-tight text-blue-400">CI L&D Hub</h1>
+            {isSyncing ? (
+              <i className="fas fa-sync animate-spin text-blue-400 text-xs"></i>
+            ) : (
+              <button 
+                onClick={() => fetchFromCloud()} 
+                title="Refresh from Google Sheets"
+                className="text-slate-500 hover:text-blue-400 transition-colors"
+              >
+                <i className="fas fa-cloud-download-alt text-xs"></i>
+              </button>
+            )}
+          </div>
+          <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest leading-none">Researcher Platform</p>
+          
+          {cloudError && (
+            <div className="mt-3 bg-amber-500/10 border border-amber-500/20 rounded p-2">
+              <p className="text-[8px] text-amber-400 font-bold uppercase leading-tight">{cloudError}</p>
+            </div>
+          )}
         </div>
         
-        <nav className="flex-1 p-4 space-y-2">
-          <Link to="/" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${location.pathname === '/' ? 'bg-slate-800 text-blue-400' : ''}`}>
-            <i className="fas fa-home w-5"></i>
-            <span>Courses</span>
+        <nav className="flex-1 p-4 space-y-1">
+          <Link to="/" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-all font-bold text-sm ${location.pathname === '/' ? 'bg-slate-800 text-blue-400 shadow-inner' : 'text-slate-400'}`}>
+            <i className="fas fa-compass w-5 text-center"></i>
+            <span>Browse Hub</span>
           </Link>
-          <Link to="/my-learning" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${location.pathname === '/my-learning' ? 'bg-slate-800 text-blue-400' : ''}`}>
-            <i className="fas fa-book-open w-5"></i>
-            <span>My Learning</span>
+          <Link to="/my-learning" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-all font-bold text-sm ${location.pathname === '/my-learning' ? 'bg-slate-800 text-blue-400 shadow-inner' : 'text-slate-400'}`}>
+            <i className="fas fa-graduation-cap w-5 text-center"></i>
+            <span>My Progress</span>
           </Link>
-          <Link to="/leaderboard" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors ${location.pathname === '/leaderboard' ? 'bg-slate-800 text-blue-400' : ''}`}>
-            <i className="fas fa-trophy w-5"></i>
-            <span>Leaderboard</span>
+          <Link to="/leaderboard" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-all font-bold text-sm ${location.pathname === '/leaderboard' ? 'bg-slate-800 text-blue-400 shadow-inner' : 'text-slate-400'}`}>
+            <i className="fas fa-medal w-5 text-center"></i>
+            <span>Rankings</span>
           </Link>
+          
+          <div className="pt-4 pb-2 px-3">
+             <div className="h-px bg-slate-800 w-full" />
+          </div>
+
           {currentUser?.role === UserRole.ADMIN && (
-            <Link to="/admin" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors text-blue-400 ${location.pathname === '/admin' ? 'bg-slate-800' : ''}`}>
-              <i className="fas fa-user-shield w-5"></i>
+            <Link to="/admin" className={`flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-all font-bold text-sm text-blue-400 ${location.pathname === '/admin' ? 'bg-slate-800' : ''}`}>
+              <i className="fas fa-user-shield w-5 text-center"></i>
               <span>Admin Panel</span>
             </Link>
           )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800 bg-slate-950/50 space-y-4">
+        <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-4">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center font-bold shadow-lg shadow-blue-500/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center font-black shadow-lg text-white">
               {currentUser?.name.charAt(0)}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium truncate">{currentUser?.name}</p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{currentUser?.role}</p>
+              <p className="text-sm font-black truncate text-slate-100">{currentUser?.name}</p>
+              <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest">{currentUser?.role}</p>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center bg-slate-800/50 p-2 rounded text-[10px] font-bold">
-              <span className="text-slate-400">MY SCORE</span>
-              <span className="text-blue-400">{currentUser?.points} PTS</span>
+            <div className="flex justify-between items-center bg-slate-800/80 p-2 rounded-lg text-[9px] font-black border border-slate-700/50">
+              <span className="text-slate-500 uppercase">My Points</span>
+              <span className="text-blue-400">{currentUser?.points}</span>
             </div>
-            <Button variant="ghost" size="sm" className="w-full text-xs text-slate-400 hover:text-white" onClick={logout}>
-              <i className="fas fa-sign-out-alt mr-2"></i> Log Out
+            <Button variant="ghost" size="sm" className="w-full text-[10px] text-slate-500 hover:text-white uppercase font-black tracking-widest" onClick={logout}>
+              Sign Out
             </Button>
           </div>
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-slate-50 p-8">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/my-learning" element={<MyLearning />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route 
-            path="/admin" 
-            element={currentUser?.role === UserRole.ADMIN ? <AdminDashboard /> : <Navigate to="/" />} 
-          />
-          <Route path="/login" element={<Navigate to="/" replace />} />
-        </Routes>
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8 max-w-7xl mx-auto min-h-screen">
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/my-learning" element={<MyLearning />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route 
+              path="/admin" 
+              element={currentUser?.role === UserRole.ADMIN ? <AdminDashboard /> : <Navigate to="/" />} 
+            />
+            <Route path="/login" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
       </main>
     </div>
   );
