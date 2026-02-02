@@ -128,17 +128,23 @@ const AdminDashboard: React.FC = () => {
           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-8">
             <h4 className="text-xl font-black text-slate-800 mb-6">Cloud Sync Setup</h4>
             <div className="space-y-4 text-sm text-slate-600 font-medium">
-              <p>1. Paste your Web App URL into <code className="bg-slate-100 px-1 rounded">App.tsx</code>.</p>
-              <p>2. Click <span className="text-blue-600 font-bold">Push Master Data</span> to initialize the Spreadsheet.</p>
-              <p>3. The app will now auto-save all changes to your Google Sheet.</p>
+              <p>1. Paste your Web App URL into <code className="bg-slate-100 px-1 rounded">App.tsx</code> (Line 17).</p>
+              <p>2. Click <span className="text-blue-600 font-bold uppercase">Push Master Data</span> at the top right to initialize the Spreadsheet.</p>
+              <p>3. The app will now automatically save all changes to your Google Sheet.</p>
             </div>
           </div>
-          <div className="bg-slate-900 rounded-3xl p-8 text-white">
-            <h4 className="text-xl font-black mb-6 text-emerald-400">Data Export</h4>
-            <p className="text-xs text-slate-400 mb-6">All data is mirrored in your Google Sheet. You can download it as Excel anytime.</p>
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-              <p className="font-bold text-emerald-400 text-xs mb-1">To Get Excel/CSV:</p>
-              <p className="text-[11px] text-slate-300">Open your Google Sheet > File > Download > .xlsx</p>
+          <div className="bg-slate-900 rounded-3xl p-8 text-white shadow-xl shadow-slate-200">
+            <h4 className="text-xl font-black mb-6 text-emerald-400">Data Governance</h4>
+            <p className="text-xs text-slate-400 mb-6 leading-relaxed">Your data is stored securely in your private Google Sheet. You can download the current state as Excel anytime from the Sheet interface.</p>
+            <div className="space-y-3">
+              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                <p className="font-bold text-emerald-400 text-[10px] mb-1 uppercase tracking-widest">Excel Export</p>
+                <p className="text-[11px] text-slate-300">Google Sheet > File > Download > .xlsx</p>
+              </div>
+              <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                <p className="font-bold text-emerald-400 text-[10px] mb-1 uppercase tracking-widest">Management</p>
+                <p className="text-[11px] text-slate-300">Use the Sheet tabs to generate your own department statistics.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -149,16 +155,16 @@ const AdminDashboard: React.FC = () => {
           <h3 className="text-lg font-black mb-6 uppercase tracking-widest text-slate-800">L&D Performance</h3>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between items-center text-sm font-bold border-b border-slate-100 pb-3">
                 <span className="text-slate-500">Participation Rate</span>
-                <span className="font-bold">{((stats.totalEnrollments / (stats.totalUsers || 1)) * 100).toFixed(0)}%</span>
+                <span className="text-slate-900">{((stats.totalEnrollments / (stats.totalUsers || 1)) * 100).toFixed(0)}%</span>
               </div>
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between items-center text-sm font-bold border-b border-slate-100 pb-3">
                 <span className="text-slate-500">Avg Courses/Researcher</span>
-                <span className="font-bold">{(stats.totalEnrollments / (stats.totalUsers || 1)).toFixed(1)}</span>
+                <span className="text-slate-900">{(stats.totalEnrollments / (stats.totalUsers || 1)).toFixed(1)}</span>
               </div>
             </div>
-            <div className="bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+            <div className="bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-slate-200">
                <div className="text-5xl font-black text-blue-600 mb-1">{stats.totalCompletions}</div>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed Certs</p>
             </div>
