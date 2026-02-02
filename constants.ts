@@ -6,6 +6,7 @@ export const INITIAL_USERS: User[] = [
   { id: '1', name: 'Alice Admin', email: 'alice@research.ci', role: UserRole.ADMIN, points: 150, joinedDate: '2023-01-01' },
   { id: '2', name: 'Bob Researcher', email: 'bob@research.ci', role: UserRole.RESEARCHER, points: 80, joinedDate: '2023-02-15' },
   { id: '3', name: 'Charlie Dave', email: 'charlie@research.ci', role: UserRole.RESEARCHER, points: 210, joinedDate: '2023-03-10' },
+  { id: '4', name: 'test0', email: 'test0@a-star.edu.sg', role: UserRole.RESEARCHER, points: 100, joinedDate: '2023-03-10' },
 ];
 
 export const INITIAL_COURSES: Course[] = [
