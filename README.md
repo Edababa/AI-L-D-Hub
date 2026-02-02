@@ -1,20 +1,28 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# CI L&D Hub 🔬
 
-# Run and deploy your AI Studio app
+A customized Learning & Development platform for the research department to discover, track, and recommend AI and tech courses.
 
-This contains everything you need to run your app locally.
+## 🚀 Quick Start for Researchers
+1.  **Access**: Open the GitHub Pages link provided by your Admin.
+2.  **Join**: Click "Join Hub" and use your corporate email.
+3.  **Learn**: Browse courses, update your status (In-Progress/Completed), and earn points.
+4.  **Recommend**: Found a great resource? Use "Post Course" to share it.
 
-View your app in AI Studio: https://ai.studio/apps/drive/18xWeNkIpub4r3-CXj8yGY_kkBAafOz_9
+## 📂 Data & Syncing (Important!)
+To keep costs at $0, this app saves data in your browser. To see recommendations from others:
+- **To Get Updates**: Click **"Import Dept Data"** in the Admin Panel (or Data Management) and select the latest `.json` file from our shared MS Teams/Google Drive folder.
+- **To Share Your Posts**: If you are an Admin, click **"Export Master"** and upload that file to the shared department folder so others can see your new courses.
 
-## Run Locally
+## 🛡️ Admin Guide: Creating a "Checkpoint"
+To save a version of the app before making big changes:
+1.  Go to the **Releases** section on GitHub.
+2.  Click **Draft a new release**.
+3.  Tag it (e.g., `v1.0-stable`) and click **Publish**.
 
-**Prerequisites:**  Node.js
+## 🛠 Tech Stack
+- **Frontend**: React 19 + Tailwind CSS
+- **AI Engine**: Gemini 2.0 Flash
+- **Hosting**: GitHub Pages ($0 cost)
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+*Developed for the CI Research Department.*
