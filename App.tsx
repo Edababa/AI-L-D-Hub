@@ -12,8 +12,7 @@ import Login from './pages/Login';
 
 /**
  * --- CLOUD CONFIGURATION ---
- * 1. PASTE YOUR GOOGLE APPS SCRIPT URL BELOW between the quotes.
- * Example: const CLOUD_URL: string = "https://script.google.com/macros/s/ABC123xyz/exec";
+ * PASTE YOUR GOOGLE APPS SCRIPT URL BELOW.
  */
 const CLOUD_URL: string = "https://script.google.com/macros/s/AKfycbxdibLzZ-q94bGsxv5TLF6bIYmm3HNa7yc20CNEYXQDR56Eg5ibkEXtahBDsOqJ4EkIqQ/exec"; 
 
@@ -88,7 +87,7 @@ const App: React.FC = () => {
       setCloudError(null);
     } catch (err) {
       console.error("Cloud fetch failed:", err);
-      setCloudError("Offline: Using local cache.");
+      setCloudError("Sync Error: Cloud update failed.");
     } finally {
       setIsSyncing(false);
     }
@@ -96,7 +95,7 @@ const App: React.FC = () => {
 
   const syncToCloud = async (overrideState?: AppState) => {
     if (!CLOUD_URL || !CLOUD_URL.startsWith('http')) {
-       alert("ACTION REQUIRED: You must paste your Google Web App URL into App.tsx (Line 17) before you can push data.");
+       alert("Please paste your Google Web App URL into App.tsx (Line 16) first!");
        return;
     }
     setIsSyncing(true);
